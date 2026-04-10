@@ -22,6 +22,9 @@ namespace OPZ.Core
         [SerializeField] GameObject moveMarkerPrefab;
         [SerializeField] GameObject attackMarkerPrefab;
 
+        [Header("Debug")]
+        [SerializeField] bool debugMoveResolution;
+
         Camera _cam;
 
         void Awake()
@@ -131,17 +134,22 @@ namespace OPZ.Core
             }
 
             // Priority 5: move (project click to nearest NavMesh point)
-            if (TryResolveMovePoint(ray, out Vector3 movePoint))
+            if (TryResolveMovePoint(ray, out Vector3 movePoint, out string failReason))
             {
                 foreach (var u in selected)
                     u.CommandMove(movePoint);
                 SpawnMarker(moveMarkerPrefab, movePoint);
             }
+            else if (debugMoveResolution)
+            {
+                Debug.LogWarning($"[CommandSystem] Move command rejected: {failReason}", this);
+            }
         }
 
-        bool TryResolveMovePoint(Ray ray, out Vector3 movePoint)
+        bool TryResolveMovePoint(Ray ray, out Vector3 movePoint, out string failReason)
         {
             movePoint = default;
+            failReason = string.Empty;
 
             Vector3 candidate;
             if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f, groundLayer, QueryTriggerInteraction.Ignore))
@@ -155,7 +163,11 @@ namespace OPZ.Core
             else
             {
                 var plane = new Plane(Vector3.up, Vector3.zero);
-                if (!plane.Raycast(ray, out float enter)) return false;
+                if (!plane.Raycast(ray, out float enter))
+                {
+                    failReason = "no collider hit and no world-plane intersection";
+                    return false;
+                }
                 candidate = ray.GetPoint(enter);
             }
 
@@ -165,6 +177,7 @@ namespace OPZ.Core
                 return true;
             }
 
+            failReason = $"no NavMesh near click candidate ({candidate.x:F1}, {candidate.y:F1}, {candidate.z:F1})";
             return false;
         }
 

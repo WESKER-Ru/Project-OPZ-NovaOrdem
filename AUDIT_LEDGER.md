@@ -227,3 +227,21 @@
 
 ### Next smallest logical task
 - Task 12 (P1): add optional gizmo/debug overlay for resolved move points and failed click reasons to speed map authoring QA.
+
+## 2026-04-10 — Task 12 (P1): Add debug reason logging for failed move-point resolution
+
+### Evidence checked
+- Runtime move issues can come from multiple stages (raycast layer miss, no collider, no plane intersection, no nearby NavMesh).
+- Previous pipeline only returned true/false, making field diagnosis slower.
+
+### Action taken
+- Added `debugMoveResolution` toggle in `CommandSystem` Inspector.
+- `TryResolveMovePoint(...)` now returns both success/failure and a textual reason when it fails.
+- `HandleRightClick(...)` now logs rejection reason when debug toggle is enabled.
+
+### Conclusion
+- Movement failures can now be diagnosed quickly in live scene runs without invasive debug code.
+- This should accelerate pinpointing whether remaining issues are layer setup, geometry hit, or NavMesh coverage.
+
+### Next smallest logical task
+- Task 13 (P1): add lightweight editor gizmo for last resolved move point and last rejection candidate.
