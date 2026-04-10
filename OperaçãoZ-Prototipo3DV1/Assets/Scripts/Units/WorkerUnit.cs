@@ -14,6 +14,7 @@ namespace OPZ.Units
         [SerializeField] float gatherTickInterval = 1f;
         [SerializeField] float fleeRadius = 8f;
         [SerializeField] float fleeDuration = 3f;
+        [SerializeField] float resumeTimeout = 2f;
 
         int _carried;
         ResourceType _carriedType;
@@ -25,6 +26,7 @@ namespace OPZ.Units
         // Remember previous command for ResumePreviousCommand
         UnitState _previousState;
         ResourceNode _previousNode;
+        float _resumeTimer;
 
         public int Carried => _carried;
         public ResourceType CarriedType => _carriedType;
@@ -112,7 +114,9 @@ namespace OPZ.Units
             _previousState = UnitState.Gather;
             _previousNode = _targetNode;
 
-            var depot = EconomyManager.Instance.FindNearestDepot(Faction, transform.position);
+            var depot = EconomyManager.Instance != null
+                ? EconomyManager.Instance.FindNearestDepot(Faction, transform.position)
+                : null;
             if (depot == null)
             {
                 Debug.LogWarning("[Worker] No depot found!");
@@ -133,7 +137,7 @@ namespace OPZ.Units
             _carried = 0;
 
             // Resume gathering
-            CurrentState = UnitState.ResumePreviousCommand;
+            EnterResumeState();
         }
 
         // --- Build Logic ---
@@ -181,16 +185,50 @@ namespace OPZ.Units
         {
             _fleeTimer -= Time.deltaTime;
             if (_fleeTimer <= 0f)
-                CurrentState = UnitState.ResumePreviousCommand;
+                EnterResumeState();
         }
 
         // --- Resume ---
+        void EnterResumeState()
+        {
+            _resumeTimer = resumeTimeout;
+            CurrentState = UnitState.ResumePreviousCommand;
+        }
+
         void ResumeCommand()
         {
             if (_previousState == UnitState.Gather && _previousNode != null && !_previousNode.IsDepleted)
+            {
                 CommandGather(_previousNode);
-            else
-                CurrentState = UnitState.Idle;
+                return;
+            }
+
+            // Fallback: if still carrying resources, try to reach a depot before giving up.
+            if (_carried > 0)
+            {
+                var depot = EconomyManager.Instance != null
+                    ? EconomyManager.Instance.FindNearestDepot(Faction, transform.position)
+                    : null;
+
+                if (depot != null)
+                {
+                    CurrentState = UnitState.ReturnToDepot;
+                    MoveTo(depot.DropOffPoint);
+                    return;
+                }
+
+                _resumeTimer -= Time.deltaTime;
+                if (_resumeTimer > 0f) return;
+
+                Debug.LogWarning("[Worker] Resume timeout while carrying resources and no depot available. Going idle.", this);
+            }
+
+            _carried = Mathf.Max(0, _carried);
+            _targetNode = null;
+            _previousNode = null;
+            _previousState = UnitState.Idle;
+            _resumeTimer = 0f;
+            CurrentState = UnitState.Idle;
         }
 
         void FaceTarget(Transform t)

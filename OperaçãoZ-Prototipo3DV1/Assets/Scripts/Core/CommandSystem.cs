@@ -1,6 +1,7 @@
 // Assets/Scripts/Core/CommandSystem.cs
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.AI;
 using OPZ.Units;
 using OPZ.Economy;
 using OPZ.Building;
@@ -20,6 +21,9 @@ namespace OPZ.Core
         [Header("Feedback")]
         [SerializeField] GameObject moveMarkerPrefab;
         [SerializeField] GameObject attackMarkerPrefab;
+
+        [Header("Debug")]
+        [SerializeField] bool debugMoveResolution;
 
         Camera _cam;
 
@@ -129,13 +133,52 @@ namespace OPZ.Core
                 }
             }
 
-            // Priority 5: ground → move
-            if (Physics.Raycast(ray, out RaycastHit hitGround, 500f, groundLayer))
+            // Priority 5: move (project click to nearest NavMesh point)
+            if (TryResolveMovePoint(ray, out Vector3 movePoint, out string failReason))
             {
                 foreach (var u in selected)
-                    u.CommandMove(hitGround.point);
-                SpawnMarker(moveMarkerPrefab, hitGround.point);
+                    u.CommandMove(movePoint);
+                SpawnMarker(moveMarkerPrefab, movePoint);
             }
+            else if (debugMoveResolution)
+            {
+                Debug.LogWarning($"[CommandSystem] Move command rejected: {failReason}", this);
+            }
+        }
+
+        bool TryResolveMovePoint(Ray ray, out Vector3 movePoint, out string failReason)
+        {
+            movePoint = default;
+            failReason = string.Empty;
+
+            Vector3 candidate;
+            if (Physics.Raycast(ray, out RaycastHit hitGround, 1000f, groundLayer, QueryTriggerInteraction.Ignore))
+            {
+                candidate = hitGround.point;
+            }
+            else if (Physics.Raycast(ray, out RaycastHit hitAny, 1000f, ~0, QueryTriggerInteraction.Ignore))
+            {
+                candidate = hitAny.point;
+            }
+            else
+            {
+                var plane = new Plane(Vector3.up, Vector3.zero);
+                if (!plane.Raycast(ray, out float enter))
+                {
+                    failReason = "no collider hit and no world-plane intersection";
+                    return false;
+                }
+                candidate = ray.GetPoint(enter);
+            }
+
+            if (NavMesh.SamplePosition(candidate, out NavMeshHit navHit, 30f, NavMesh.AllAreas))
+            {
+                movePoint = navHit.position;
+                return true;
+            }
+
+            failReason = $"no NavMesh near click candidate ({candidate.x:F1}, {candidate.y:F1}, {candidate.z:F1})";
+            return false;
         }
 
         void StopSelected()

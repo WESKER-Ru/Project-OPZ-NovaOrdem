@@ -7,6 +7,8 @@ using UnityEngine.InputSystem;
 
 namespace OPZ.Proto
 {
+    [System.Obsolete("Legacy prototype selector. Use OPZ.Core.SelectionManager in runtime scenes.", false)]
+    [AddComponentMenu("OPZ/Proto/LEGACY SelectionManager (Do Not Use)")]
     public class SelectionManager : MonoBehaviour
     {
         [Header("Config")]
@@ -19,6 +21,13 @@ namespace OPZ.Proto
         Camera _cam;
         Vector2 _mouseDownPos;
         bool _isDragging;
+
+        void Awake()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[Proto.SelectionManager] Legacy prototype component active. Prefer OPZ.Core.SelectionManager.", this);
+#endif
+        }
 
         void Start()
         {

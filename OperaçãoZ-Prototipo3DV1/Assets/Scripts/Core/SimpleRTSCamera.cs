@@ -4,6 +4,8 @@ using UnityEngine.InputSystem;
 
 namespace OPZ.Core
 {
+    [System.Obsolete("Legacy camera prototype. Use OPZ.Core.RTSCameraController in runtime scenes.", false)]
+    [AddComponentMenu("OPZ/Core/LEGACY Simple RTS Camera (Do Not Use)")]
     public class SimpleRTSCamera : MonoBehaviour
     {
         [Header("Pan")]
@@ -25,6 +27,13 @@ namespace OPZ.Core
         [Header("Bounds")]
         public float boundsX = 160f;
         public float boundsZ = 160f;
+
+        void Awake()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[SimpleRTSCamera] Legacy camera component active. Prefer OPZ.Core.RTSCameraController.", this);
+#endif
+        }
 
         void LateUpdate()
         {
