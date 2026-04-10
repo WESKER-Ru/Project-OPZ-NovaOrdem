@@ -33,3 +33,6 @@ Thumbs.db
 
 # Visual Studio Code
 .vscode/
+
+# Zip files
+*.zip
