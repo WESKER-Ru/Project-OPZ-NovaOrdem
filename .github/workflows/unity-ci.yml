@@ -1,0 +1,46 @@
+name: Unity CI
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+jobs:
+  unity-tests:
+    name: Unity EditMode/PlayMode Tests
+    if: ${{ secrets.UNITY_LICENSE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: OperaçãoZ-Prototipo3DV1/Library
+          key: Library-${{ runner.os }}-${{ hashFiles('OperaçãoZ-Prototipo3DV1/Assets/**', 'OperaçãoZ-Prototipo3DV1/Packages/**', 'OperaçãoZ-Prototipo3DV1/ProjectSettings/**') }}
+          restore-keys: |
+            Library-${{ runner.os }}-
+
+      - name: Run Unity tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: OperaçãoZ-Prototipo3DV1
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  unity-tests-missing-secrets:
+    name: Unity Tests Skipped (Missing Secrets)
+    if: ${{ secrets.UNITY_LICENSE == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skip
+        run: |
+          echo "UNITY_LICENSE secret is missing."
+          echo "Configure UNITY_LICENSE (and optionally UNITY_EMAIL/UNITY_PASSWORD) in repo secrets to enable Unity CI."
