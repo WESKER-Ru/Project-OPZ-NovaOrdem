@@ -285,3 +285,22 @@
 
 ### Next smallest logical task
 - Task 15 (P1): add a one-time scene validator utility that lists legacy components without spamming runtime logs.
+
+## 2026-04-11 — Task 15 (Runtime): Reduce unit clumping that blocks exits from base
+
+### Evidence checked
+- Symptom persisted: some units remained stuck around base while only part of the group moved.
+- Single-point move orders can cause dense clumping/collision around chokepoints, making movement look partially broken.
+
+### Action taken
+- Updated `CommandSystem` move dispatch to assign per-unit formation slots instead of sending all selected units to identical coordinates.
+- Added `ResolveFormationSlot(center, index)`:
+  - radial ring slot calculation around target;
+  - per-slot NavMesh snap (`NavMesh.SamplePosition`) fallback to center.
+
+### Conclusion
+- Group move commands now spread units spatially, reducing base-exit congestion and "only some units moved" behavior.
+- This complements previous NavMesh click-resolution and off-NavMesh recovery fixes.
+
+### Next smallest logical task
+- Task 16 (P1): add optional path-status debug (path complete/partial/invalid) per selected unit when move debug is enabled.

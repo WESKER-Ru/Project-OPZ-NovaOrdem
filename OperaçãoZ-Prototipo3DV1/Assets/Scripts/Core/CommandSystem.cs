@@ -136,8 +136,12 @@ namespace OPZ.Core
             // Priority 5: move (project click to nearest NavMesh point)
             if (TryResolveMovePoint(ray, out Vector3 movePoint, out string failReason))
             {
-                foreach (var u in selected)
-                    u.CommandMove(movePoint);
+                for (int i = 0; i < selected.Count; i++)
+                {
+                    var u = selected[i];
+                    Vector3 slot = ResolveFormationSlot(movePoint, i);
+                    u.CommandMove(slot);
+                }
                 SpawnMarker(moveMarkerPrefab, movePoint);
             }
             else if (debugMoveResolution)
@@ -179,6 +183,27 @@ namespace OPZ.Core
 
             failReason = $"no NavMesh near click candidate ({candidate.x:F1}, {candidate.y:F1}, {candidate.z:F1})";
             return false;
+        }
+
+        Vector3 ResolveFormationSlot(Vector3 center, int index)
+        {
+            if (index <= 0) return center;
+
+            // Ring formation around command center to reduce unit clumping at exits/chokepoints.
+            const float spacing = 1.8f;
+            int ring = Mathf.FloorToInt(Mathf.Sqrt(index));
+            int ringStart = ring * ring;
+            int ringIndex = index - ringStart;
+            int unitsInRing = Mathf.Max(1, ring * 6);
+
+            float radius = spacing * ring;
+            float ang = (Mathf.PI * 2f * ringIndex) / unitsInRing;
+            Vector3 candidate = center + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * radius;
+
+            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                return hit.position;
+
+            return center;
         }
 
         void StopSelected()
