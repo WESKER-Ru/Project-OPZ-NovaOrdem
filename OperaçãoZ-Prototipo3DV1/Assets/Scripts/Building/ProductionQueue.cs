@@ -24,10 +24,17 @@ namespace OPZ.Building
         BuildingBase _building;
 
         public int QueueCount => _queue.Count + (_currentlyProducing != null ? 1 : 0);
-        public float Progress => _currentlyProducing != null ? _currentProgress / _currentlyProducing.trainTime : 0f;
+        public float Progress => _currentlyProducing != null
+            ? Mathf.Clamp01(_currentProgress / Mathf.Max(0.01f, _currentlyProducing.trainTime))
+            : 0f;
         public UnitDef CurrentlyProducing => _currentlyProducing;
 
-        void Awake() => _building = GetComponent<BuildingBase>();
+        void Awake()
+        {
+            _building = GetComponent<BuildingBase>();
+            if (_building == null)
+                Debug.LogError("[ProductionQueue] Missing BuildingBase component.", this);
+        }
 
         void Update()
         {
@@ -49,6 +56,24 @@ namespace OPZ.Building
         /// <summary>Enqueue a unit for production. Returns false if queue full or can't afford.</summary>
         public bool Enqueue(UnitDef def)
         {
+            if (def == null)
+            {
+                Debug.LogWarning("[ProductionQueue] Enqueue called with null UnitDef.", this);
+                return false;
+            }
+
+            if (_building == null)
+            {
+                Debug.LogError("[ProductionQueue] Cannot enqueue without BuildingBase.", this);
+                return false;
+            }
+
+            if (EconomyManager.Instance == null)
+            {
+                Debug.LogError("[ProductionQueue] EconomyManager.Instance is null.", this);
+                return false;
+            }
+
             if (QueueCount >= maxQueueSize) return false;
 
             Faction f = _building.Faction;
@@ -78,14 +103,24 @@ namespace OPZ.Building
         void FinishProduction()
         {
             var def = _currentlyProducing;
+            if (def == null)
+            {
+                Debug.LogWarning("[ProductionQueue] FinishProduction called with null definition.", this);
+                _currentProgress = 0f;
+                return;
+            }
+
             _currentlyProducing = null;
             _currentProgress = 0f;
 
-            Vector3 pos = spawnPoint != null ? spawnPoint.position : transform.position + transform.forward * 3f;
+            if (def.prefab == null)
+            {
+                Debug.LogError($"[ProductionQueue] UnitDef '{def.name}' has no prefab assigned.", this);
+                return;
+            }
 
-            // Find valid NavMesh position
-            if (NavMesh.SamplePosition(pos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
-                pos = hit.position;
+            Vector3 desired = spawnPoint != null ? spawnPoint.position : transform.position + transform.forward * 3f;
+            Vector3 pos = ResolveSpawnPositionOnNavMesh(desired, def.prefab);
 
             GameObject unitGO = Instantiate(def.prefab, pos, Quaternion.identity);
             var unit = unitGO.GetComponent<UnitBase>();
@@ -101,10 +136,37 @@ namespace OPZ.Building
 
         void Refund(UnitDef def)
         {
+            if (def == null || _building == null || EconomyManager.Instance == null) return;
+
             Faction f = _building.Faction;
             EconomyManager.Instance.AddResource(f, ResourceType.Supplies, def.suppliesCost);
             EconomyManager.Instance.AddResource(f, ResourceType.Metal, def.metalCost);
             EconomyManager.Instance.AddResource(f, ResourceType.Fuel, def.fuelCost);
+        }
+
+        Vector3 ResolveSpawnPositionOnNavMesh(Vector3 desired, GameObject prefab)
+        {
+            float probeRadius = 5f;
+            var prefabAgent = prefab != null ? prefab.GetComponent<NavMeshAgent>() : null;
+            if (prefabAgent != null)
+                probeRadius = Mathf.Max(probeRadius, prefabAgent.radius * 6f);
+
+            if (NavMesh.SamplePosition(desired, out NavMeshHit hit, probeRadius, NavMesh.AllAreas))
+                return hit.position;
+
+            // Fallback ring search around desired spawn point.
+            const int probeSteps = 8;
+            const float ringDistance = 2.5f;
+            for (int i = 0; i < probeSteps; i++)
+            {
+                float ang = (Mathf.PI * 2f * i) / probeSteps;
+                Vector3 probe = desired + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * ringDistance;
+                if (NavMesh.SamplePosition(probe, out hit, probeRadius, NavMesh.AllAreas))
+                    return hit.position;
+            }
+
+            Debug.LogWarning("[ProductionQueue] Could not find NavMesh near spawn point; using desired position.", this);
+            return desired;
         }
     }
 }

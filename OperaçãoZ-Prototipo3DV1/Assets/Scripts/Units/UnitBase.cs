@@ -17,6 +17,10 @@ namespace OPZ.Units
         [Header("Selection Visual")]
         [SerializeField] GameObject selectionCircle;
 
+        [Header("NavMesh Recovery")]
+        [SerializeField] float navMeshRecoveryRadius = 25f;
+        [SerializeField] float destinationRecoveryRadius = 12f;
+
         public Faction Faction => faction;
         public UnitDef Def => unitDef;
         public UnitState CurrentState { get; protected set; } = UnitState.Idle;
@@ -25,6 +29,7 @@ namespace OPZ.Units
 
         protected NavMeshAgent Agent;
         protected HealthComponent _health;
+        bool _warnedOffNavMesh;
 
         protected virtual void Awake()
         {
@@ -41,6 +46,8 @@ namespace OPZ.Units
             _health.OnDeath += HandleDeath;
 
             if (selectionCircle != null) selectionCircle.SetActive(false);
+
+            EnsureOnNavMesh();
         }
 
         protected virtual void Start()
@@ -60,9 +67,9 @@ namespace OPZ.Units
         // --- Commands ---
         public virtual void CommandMove(Vector3 destination)
         {
+            if (!TrySetDestination(destination)) return;
+
             CurrentState = UnitState.Move;
-            Agent.isStopped = false;
-            Agent.SetDestination(destination);
         }
 
         public virtual void CommandStop()
@@ -81,14 +88,14 @@ namespace OPZ.Units
         // --- Movement helpers ---
         protected bool HasReachedDestination(float threshold = 0.5f)
         {
+            if (Agent == null || !Agent.enabled || !Agent.isOnNavMesh) return false;
             if (Agent.pathPending) return false;
             return Agent.remainingDistance <= threshold;
         }
 
         protected void MoveTo(Vector3 pos)
         {
-            Agent.isStopped = false;
-            Agent.SetDestination(pos);
+            TrySetDestination(pos);
         }
 
         protected void Stop()
@@ -114,6 +121,42 @@ namespace OPZ.Units
             faction = fac;
             Agent.speed = def.moveSpeed;
             _health.Init(def.maxHealth);
+
+            EnsureOnNavMesh();
+        }
+
+        bool TrySetDestination(Vector3 destination)
+        {
+            if (Agent == null || !Agent.enabled) return false;
+
+            EnsureOnNavMesh();
+            if (!Agent.isOnNavMesh)
+            {
+                // Last attempt: snap close to commanded destination and retry.
+                if (NavMesh.SamplePosition(destination, out NavMeshHit destinationHit, destinationRecoveryRadius, NavMesh.AllAreas))
+                    Agent.Warp(destinationHit.position);
+
+                if (!_warnedOffNavMesh)
+                {
+                    Debug.LogWarning($"[UnitBase] Unit '{name}' is off NavMesh; command ignored until repositioned.", this);
+                    _warnedOffNavMesh = true;
+                }
+
+                if (!Agent.isOnNavMesh)
+                    return false;
+            }
+
+            Agent.isStopped = false;
+            _warnedOffNavMesh = false;
+            return Agent.SetDestination(destination);
+        }
+
+        void EnsureOnNavMesh()
+        {
+            if (Agent == null || !Agent.enabled || Agent.isOnNavMesh) return;
+
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, navMeshRecoveryRadius, NavMesh.AllAreas))
+                Agent.Warp(hit.position);
         }
     }
 }
