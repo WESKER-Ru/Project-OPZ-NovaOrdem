@@ -1,0 +1,30 @@
+name: Unity CI
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+jobs:
+  unity-tests:
+    if: ${{ secrets.UNITY_LICENSE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: OperaçãoZ-Prototipo3DV1
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  unity-tests-missing-secrets:
+    if: ${{ secrets.UNITY_LICENSE == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "UNITY_LICENSE missing; Unity CI skipped."
