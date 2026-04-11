@@ -6,8 +6,13 @@ using UnityEngine.InputSystem;
 
 namespace OPZ.Proto
 {
+    [System.Obsolete("Legacy prototype command dispatcher. Use OPZ.Core.CommandSystem in runtime scenes.", false)]
+    [AddComponentMenu("OPZ/Proto/LEGACY CommandGiver (Do Not Use)")]
     public class CommandGiver : MonoBehaviour
     {
+        [Header("Legacy")]
+        [SerializeField] bool showLegacyWarning;
+
         [Header("Config")]
         public LayerMask groundLayer; // layer do chão (para raycast)
 
@@ -16,6 +21,14 @@ namespace OPZ.Proto
 
         SelectionManager _selection;
         Camera _cam;
+
+        void Awake()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (showLegacyWarning)
+                Debug.LogWarning("[Proto.CommandGiver] Legacy prototype component active. Prefer OPZ.Core.CommandSystem.", this);
+#endif
+        }
 
         void Start()
         {

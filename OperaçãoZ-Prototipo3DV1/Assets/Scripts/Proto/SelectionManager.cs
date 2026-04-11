@@ -7,8 +7,13 @@ using UnityEngine.InputSystem;
 
 namespace OPZ.Proto
 {
+    [System.Obsolete("Legacy prototype selector. Use OPZ.Core.SelectionManager in runtime scenes.", false)]
+    [AddComponentMenu("OPZ/Proto/LEGACY SelectionManager (Do Not Use)")]
     public class SelectionManager : MonoBehaviour
     {
+        [Header("Legacy")]
+        [SerializeField] bool showLegacyWarning;
+
         [Header("Config")]
         public LayerMask selectableLayer; // layer das unidades
         public float dragThreshold = 8f;  // pixels antes de virar box select
@@ -19,6 +24,14 @@ namespace OPZ.Proto
         Camera _cam;
         Vector2 _mouseDownPos;
         bool _isDragging;
+
+        void Awake()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (showLegacyWarning)
+                Debug.LogWarning("[Proto.SelectionManager] Legacy prototype component active. Prefer OPZ.Core.SelectionManager.", this);
+#endif
+        }
 
         void Start()
         {
