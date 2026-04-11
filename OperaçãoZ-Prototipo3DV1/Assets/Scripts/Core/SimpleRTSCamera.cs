@@ -8,6 +8,9 @@ namespace OPZ.Core
     [AddComponentMenu("OPZ/Core/LEGACY Simple RTS Camera (Do Not Use)")]
     public class SimpleRTSCamera : MonoBehaviour
     {
+        [Header("Legacy")]
+        [SerializeField] bool showLegacyWarning;
+
         [Header("Pan")]
         public float panSpeed = 50f;
         public float edgePanMargin = 15f;
@@ -31,7 +34,8 @@ namespace OPZ.Core
         void Awake()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[SimpleRTSCamera] Legacy camera component active. Prefer OPZ.Core.RTSCameraController.", this);
+            if (showLegacyWarning)
+                Debug.LogWarning("[SimpleRTSCamera] Legacy camera component active. Prefer OPZ.Core.RTSCameraController.", this);
 #endif
         }
 

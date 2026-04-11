@@ -11,6 +11,9 @@ namespace OPZ.Proto
     [AddComponentMenu("OPZ/Proto/LEGACY SelectionManager (Do Not Use)")]
     public class SelectionManager : MonoBehaviour
     {
+        [Header("Legacy")]
+        [SerializeField] bool showLegacyWarning;
+
         [Header("Config")]
         public LayerMask selectableLayer; // layer das unidades
         public float dragThreshold = 8f;  // pixels antes de virar box select
@@ -25,7 +28,8 @@ namespace OPZ.Proto
         void Awake()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[Proto.SelectionManager] Legacy prototype component active. Prefer OPZ.Core.SelectionManager.", this);
+            if (showLegacyWarning)
+                Debug.LogWarning("[Proto.SelectionManager] Legacy prototype component active. Prefer OPZ.Core.SelectionManager.", this);
 #endif
         }
 

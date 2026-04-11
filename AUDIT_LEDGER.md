@@ -267,3 +267,21 @@
 
 ### Next smallest logical task
 - Task 14 (P1): add a lightweight CI job for non-Unity checks (markdown/yaml lint) that runs even without Unity secrets.
+
+## 2026-04-11 — Task 14 (UX): Silence legacy warnings by default
+
+### Evidence checked
+- Runtime/editor logs were showing legacy warnings for `Proto.SelectionManager`, `Proto.CommandGiver`, and `SimpleRTSCamera`.
+- Warnings were useful during migration, but noisy for normal testing once legacy status was already known.
+
+### Action taken
+- Added serialized toggle `showLegacyWarning` in all three legacy scripts.
+- Legacy warnings now only log when this toggle is manually enabled in Inspector.
+- Deprecated markers (`[System.Obsolete]` + legacy component menu names) remain in place.
+
+### Conclusion
+- Console noise is reduced for regular gameplay testing.
+- Teams can re-enable warnings per-object when auditing legacy scene usage.
+
+### Next smallest logical task
+- Task 15 (P1): add a one-time scene validator utility that lists legacy components without spamming runtime logs.

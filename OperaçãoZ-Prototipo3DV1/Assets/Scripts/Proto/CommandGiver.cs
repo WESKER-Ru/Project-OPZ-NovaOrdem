@@ -10,6 +10,9 @@ namespace OPZ.Proto
     [AddComponentMenu("OPZ/Proto/LEGACY CommandGiver (Do Not Use)")]
     public class CommandGiver : MonoBehaviour
     {
+        [Header("Legacy")]
+        [SerializeField] bool showLegacyWarning;
+
         [Header("Config")]
         public LayerMask groundLayer; // layer do chão (para raycast)
 
@@ -22,7 +25,8 @@ namespace OPZ.Proto
         void Awake()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[Proto.CommandGiver] Legacy prototype component active. Prefer OPZ.Core.CommandSystem.", this);
+            if (showLegacyWarning)
+                Debug.LogWarning("[Proto.CommandGiver] Legacy prototype component active. Prefer OPZ.Core.CommandSystem.", this);
 #endif
         }
 
