@@ -55,7 +55,7 @@ namespace OPZ.Core
             if (kb != null)
             {
                 if (kb.wKey.isPressed || kb.upArrowKey.isPressed) move += forward;
-                if ((kb.sKey.isPressed && !kb.leftCtrlKey.isPressed) || kb.downArrowKey.isPressed) move -= forward;
+                if (kb.downArrowKey.isPressed) move -= forward;
                 if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) move += right;
                 if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) move -= right;
 
